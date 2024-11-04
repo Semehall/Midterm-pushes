@@ -1,5 +1,5 @@
 # Midterm-pushes
-
+//scene 1
 let angle = 0;
 let stars = [];
 let speed;
