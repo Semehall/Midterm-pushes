@@ -1,0 +1,251 @@
+//This project is a p5.js animation with five scenes that follow a figure floating in space. 
+//The stars moves slowly when the cursor is on the left and speeds up as the cursor moves to the right. 
+//As the scenes progress, colors flash and a black hole appears, pulling the figure in. 
+//The figure’s head turns pink as it’s drawn closer and eventually swallowed by the black hole. 
+//The animation ends with an explosive effect and a calming starfield, wrapping up the story.
+
+let angle = 0; // Rotation angle
+let stars = []; // Stars array
+let people = []; // People array
+let lastPersonAddedFrame = 0; // Last frame tracker
+let speed; // Speed variable
+let scene = 1; // Scene state
+let transitionFrame = 600; // Scene change
+let flashSpeed = 30; // Flash effect
+let personX, personY; // Person position
+let blackHoleSize = 0; // Black hole size
+let blackHoleGrowing = false; // Growth state
+let shakeAmount = 0; // Shake effect
+let explosionTriggered = false; // Explosion state
+let explosionFrameStart; // Explosion start frame
+
+function setup() {
+  createCanvas(windowWidth, windowHeight); // Canvas setup
+  for (let i = 0; i < 300; i++) {
+    stars.push(new Star()); // Populate stars
+  }
+  personX = width / 2; // Initial X
+  personY = height / 2; // Initial Y
+}
+
+function draw() {
+  speed = map(mouseX, 0, width, 0, 10);
+
+  // Scene transitions
+  if (frameCount > transitionFrame && frameCount <= transitionFrame * 2) {
+    scene = 2; // Switch to second scene
+  } else if (frameCount > transitionFrame * 2 && frameCount <= transitionFrame * 2 + 420) { // 7 seconds for Scene 3
+    scene = 3; // Switch to third scene
+  } else if (frameCount > transitionFrame * 2 + 420 && frameCount <= transitionFrame * 3 + 600) { // Extended Scene 4 duration
+    scene = 4; // Switch to shaking and explosion scene
+  } else if (frameCount > transitionFrame * 3 + 600) {
+    scene = 5; // Switch to final starfield scene
+  }
+
+  if (scene === 1) {
+    drawScene1(); // Draw scene 1
+  } else if (scene === 2) {
+    drawScene2(); // Draw scene 2
+  } else if (scene === 3) {
+    drawScene3(); // Draw scene 3
+  } else if (scene === 4) {
+    drawScene4(); // Draw scene 4
+  } else if (scene === 5) {
+    drawScene5(); // Draw scene 5
+  }
+}
+
+function drawScene1() {
+  // Scene 1: Initial starfield and moving figure
+  background(0); // Black background
+  drawStarfield(); // Starfield
+  drawPerson(mouseX, mouseY); // Draw person
+}
+
+function drawScene2() {
+  // Scene 2: 
+  background(0, 10); // fading effect
+  drawStarfield(true, false, true); // colorful stars
+  drawPerson(mouseX, mouseY, 1.5, false, color(255, 182, 193)); // Larger pink figure
+}
+
+function drawScene3() {
+  // Scene 3: Flashing background with multiple colors and black hole
+  if (frameCount < transitionFrame * 2 + 420) { // 7 seconds duration
+    let colors = [color(0, 0, 255), color(255, 0, 0), color(255, 255, 0), color(255, 105, 180), color(0, 255, 0)];
+    let currentColor = colors[frameCount % colors.length];
+
+    if (frameCount % flashSpeed < flashSpeed / 2) {
+      background(currentColor);
+    } else {
+      background(0);
+    }
+
+    flashSpeed = max(1, flashSpeed * 0.95); // iincrease flash speed over time
+
+    // Start growing the black hole after flashing begins (to make it seem like the person is swallowed)
+    blackHoleGrowing = true;
+  } else {
+    background(0); // Stop flashing 
+  }
+
+  if (blackHoleGrowing) {
+    fill(0);
+    noStroke();
+    blackHoleSize += 5;
+    ellipse(width / 2, height / 2, blackHoleSize);
+
+    // Check if the person is being swallowed
+    if (blackHoleSize > dist(personX, personY, width / 2, height / 2)) {
+      personX += (width / 2 - personX) * 0.05;
+      personY += (height / 2 - personY) * 0.05;
+    }
+  }
+
+  // the person shrinking into the black hole
+  if (blackHoleSize < width) {
+    drawPerson(personX, personY, map(blackHoleSize, 0, width, 1.5, 0.1), true);
+  }
+}
+
+function drawScene4() {
+  // Scene 4: Shaking and explosion with random people added
+  if (frameCount % max(5, 20 - (frameCount - explosionFrameStart) / 10) < max(2, 10 - (frameCount - explosionFrameStart) / 20)) {
+    background(255);
+  } else {
+    background(0);
+  }
+
+  // Add a new person every second
+  if (frameCount % 30 === 0 && people.length < 200) {
+    let newPerson = {
+      x: random(width),
+      y: random(height),
+      color: color(random(255), random(255), random(255)) // color head
+    };
+    people.push(newPerson);
+  }
+
+  //  random people on screen
+  for (let i = 0; i < people.length; i++) {
+    drawPerson(people[i].x, people[i].y, 1, false, people[i].color);
+  }
+
+  if (!explosionTriggered) {
+    explosionTriggered = true;
+    explosionFrameStart = frameCount;
+  }
+
+  if (frameCount - explosionFrameStart < 600) { // 10 seconds at 60 FPS
+    translate(random(-shakeAmount, shakeAmount), random(-shakeAmount, shakeAmount));
+    shakeAmount = 15; // shake intensity
+  } else {
+    drawExplosion(); // Trigger explosion and turn into stars
+  }
+}
+
+function drawScene5() {
+  // Scene 5: Final starfield after explosion with flashing stars
+  if (frameCount % flashSpeed < flashSpeed / 2) {
+    background(255);
+  } else {
+    background(0);
+  }
+  drawStarfield(true, false, true); 
+}
+
+function drawStarfield(distant = false, dim = false, colorful = false) {
+  for (let i = 0; i < stars.length; i++) {
+    if (distant) {
+      stars[i].update(0.5); // Slower speed for vast scene
+    } else {
+      stars[i].update();
+    }
+    stars[i].show(dim, colorful);
+  }
+}
+
+function drawPerson(x, y, scaleFactor = 1, slowRotation = false, colorFill = 200) {
+  push();
+  translate(x, y);
+  angleMode(DEGREES);
+  rotate(angle);
+  scale(scaleFactor);
+
+  // Person shape
+  stroke(255);
+  fill(colorFill);
+
+  // Head
+  ellipse(0, -50, 30, 30);
+
+  // Body
+  line(0, -35, 0, 30);
+
+  // Arms
+  line(0, -20, -20, 10);
+  line(0, -20, 20, 10);
+
+  // Legs
+  line(0, 30, -15, 60);
+  line(0, 30, 15, 60);
+
+  pop();
+
+  // Adjust rotation speed for scene
+  angle += slowRotation ? 0.3 : 0.8;
+}
+
+function drawExplosion() {
+  // Simulate an explosion turning into stars
+  for (let i = 0; i < 300; i++) {
+    let x = random(width);
+    let y = random(height);
+    fill(random(100, 255), random(100, 255), random(100, 255));
+    noStroke();
+    ellipse(x, y, random(2, 5));
+  }
+}
+
+class Star {
+  constructor() {
+    this.x = random(-width, width);
+    this.y = random(-height, height);
+    this.z = random(width);
+    this.pz = this.z;
+  }
+
+  update(speedFactor = 1) {
+    this.z -= speed * speedFactor;
+    if (this.z < 1) {
+      this.z = width;
+      this.x = random(-width, width);
+      this.y = random(-height, height);
+      this.pz = this.z;
+    }
+  }
+
+
+  show(dim = false, colorful = false) {
+    if (colorful) {
+      fill(random(100, 255), random(100, 255), random(100, 255));
+    } else {
+      fill(dim ? 150 : 255);
+    }
+    noStroke();
+
+    let sx = map(this.x / this.z, 0, 1, 0, width);
+    let sy = map(this.y / this.z, 0, 1, 0, height);
+
+    let r = map(this.z, 0, width, 16, 0);
+    ellipse(sx, sy, r, r);
+
+    let px = map(this.x / this.pz, 0, 1, 0, width);
+    let py = map(this.y / this.pz, 0, 1, 0, height);
+
+    this.pz = this.z;
+
+    stroke(255);
+    line(px, py, sx, sy);
+  }
+}
