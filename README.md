@@ -34,23 +34,18 @@ function draw() {
   stroke(255);
   fill(200);
 
-  // Head
   ellipse(0, -50, 30, 30);
 
-  // Body
   line(0, -35, 0, 30);
 
-  // Arms
   line(0, -20, -20, 10);
   line(0, -20, 20, 10);
 
-  // Legs
   line(0, 30, -15, 60);
   line(0, 30, 15, 60);
 
   pop();
 
-  // Increment the angle over time
   angle += 0.8;
 }
 
