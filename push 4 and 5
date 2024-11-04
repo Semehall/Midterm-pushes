@@ -1,0 +1,150 @@
+let angle = 0;
+let stars = [];
+let personX, personY;
+let flashSpeed = 30;
+let blackHoleSize = 0;
+let blackHoleGrowing = false;
+let explosionTriggered = false;
+let explosionFrameStart;
+let people = [];
+let shakeAmount = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  for (let i = 0; i < 300; i++) {
+    stars.push(new Star());
+  }
+  personX = width / 2;
+  personY = height / 2;
+}
+
+function draw() {
+  if (frameCount < 420) {
+    drawScene3();
+  } else if (frameCount >= 420 && frameCount < 1020) {
+    drawScene4();
+  } else {
+    drawScene5();
+  }
+}
+
+function drawScene3() {
+  let colors = [color(0, 0, 255), color(255, 0, 0), color(255, 255, 0), color(255, 105, 180), color(0, 255, 0)];
+  let currentColor = colors[frameCount % colors.length];
+
+  if (frameCount % flashSpeed < flashSpeed / 2) {
+    background(currentColor);
+  } else {
+    background(0);
+  }
+
+  flashSpeed = max(1, flashSpeed * 0.95);
+  blackHoleGrowing = true;
+
+  if (blackHoleGrowing) {
+    fill(0);
+    noStroke();
+    blackHoleSize += 5;
+    ellipse(width / 2, height / 2, blackHoleSize);
+
+    if (blackHoleSize > dist(personX, personY, width / 2, height / 2)) {
+      personX += (width / 2 - personX) * 0.05;
+      personY += (height / 2 - personY) * 0.05;
+    }
+  }
+
+  if (blackHoleSize < width) {
+    drawPerson(personX, personY, map(blackHoleSize, 0, width, 1.5, 0.1), true);
+  }
+}
+
+function drawScene4() {
+  if (frameCount % max(5, 20 - (frameCount - explosionFrameStart) / 10) < max(2, 10 - (frameCount - explosionFrameStart) / 20)) {
+    background(255);
+  } else {
+    background(0);
+  }
+
+  if (frameCount % 30 === 0 && people.length < 50) {
+    let newPerson = {
+      x: random(width),
+      y: random(height),
+      color: color(random(255), random(255), random(255))
+    };
+    people.push(newPerson);
+  }
+
+  for (let i = 0; i < people.length; i++) {
+    drawPerson(people[i].x, people[i].y, 1, false, people[i].color);
+  }
+
+  if (!explosionTriggered) {
+    explosionTriggered = true;
+    explosionFrameStart = frameCount;
+  }
+
+  if (frameCount - explosionFrameStart < 600) {
+    translate(random(-shakeAmount, shakeAmount), random(-shakeAmount, shakeAmount));
+    shakeAmount = 15;
+  } else {
+    drawExplosion();
+  }
+}
+
+function drawScene5() {
+  if (frameCount % flashSpeed < flashSpeed / 2) {
+    background(255);
+  } else {
+    background(0);
+  }
+  drawStarfield(true, false, true);
+}
+
+function drawPerson(x, y, scaleFactor = 1, slowRotation = false, colorFill = 200) {
+  push();
+  translate(x, y);
+  angleMode(DEGREES);
+  rotate(angle);
+  scale(scaleFactor);
+
+  stroke(255);
+  fill(colorFill);
+
+  ellipse(0, -50, 30, 30);
+  line(0, -35, 0, 30);
+  line(0, -20, -20, 10);
+  line(0, -20, 20, 10);
+  line(0, 30, -15, 60);
+  line(0, 30, 15, 60);
+
+  pop();
+  angle += slowRotation ? 0.3 : 0.8;
+}
+
+function drawExplosion() {
+  for (let i = 0; i < 300; i++) {
+    let x = random(width);
+    let y = random(height);
+    fill(random(100, 255), random(100, 255), random(100, 255));
+    noStroke();
+    ellipse(x, y, random(2, 5));
+  }
+}
+
+class Star {
+  constructor() {
+    this.x = random(-width, width);
+    this.y = random(-height, height);
+    this.z = random(width);
+    this.pz = this.z;
+  }
+
+  update(speedFactor = 1) {
+    this.z -= 2 * speedFactor;
+    if (this.z < 1) {
+      this.z = width;
+      this.x = random(-width, width);
+      this.y = random(-height, height);
+      this.pz = this.z;
+    }
+  }
