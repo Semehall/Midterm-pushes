@@ -1,0 +1,101 @@
+//scene 2
+
+let angle = 0; // Rotation angle
+let stars = []; // Array of star objects
+let personX, personY; // Position of the person
+
+function setup() {
+  createCanvas(windowWidth, windowHeight); // Create canvas
+  for (let i = 0; i < 300; i++) {
+    stars.push(new Star()); // Initialize star objects
+  }
+  personX = width / 2; // Set initial X position
+  personY = height / 2; // Set initial Y position
+}
+
+function draw() {
+  background(0, 10); // Subtle fading effect for depth
+  drawStarfield(true, false, true); // Render colorful starfield
+  drawPerson(mouseX, mouseY, 1.5, color(255, 182, 193)); // Draw larger pink figure following the cursor
+}
+
+function drawStarfield(distant = false, dim = false, colorful = false) {
+  for (let i = 0; i < stars.length; i++) {
+    if (distant) {
+      stars[i].update(0.5); // Slower star movement for distant effect
+    } else {
+      stars[i].update();
+    }
+    stars[i].show(dim, colorful); // Render star with color option
+  }
+}
+
+function drawPerson(x, y, scaleFactor = 1, colorFill = 200) {
+  push();
+  translate(x, y); // Move to position
+  angleMode(DEGREES); // Use degrees for rotation
+  rotate(angle); // Rotate person
+  scale(scaleFactor); // Scale person
+
+  stroke(255); // White outline
+  fill(colorFill); // Fill color
+
+  // Head
+  ellipse(0, -50, 30, 30);
+
+  // Body
+  line(0, -35, 0, 30);
+
+  // Arms
+  line(0, -20, -20, 10);
+  line(0, -20, 20, 10);
+
+  // Legs
+  line(0, 30, -15, 60);
+  line(0, 30, 15, 60);
+
+  pop();
+  angle += 0.8; // Adjust rotation speed
+}
+
+class Star {
+  constructor() {
+    this.x = random(-width, width); // Initial X position
+    this.y = random(-height, height); // Initial Y position
+    this.z = random(width); // Depth position
+    this.pz = this.z; // Previous Z position
+  }
+
+  update(speedFactor = 1) {
+    this.z -= 2 * speedFactor; // Move star closer
+    if (this.z < 1) {
+      this.z = width; // Reset depth
+      this.x = random(-width, width); // New random X
+      this.y = random(-height, height); // New random Y
+      this.pz = this.z; // Reset previous Z
+    }
+  }
+
+  show(dim = false, colorful = false) {
+    if (colorful) {
+      fill(random(100, 255), random(100, 255), random(100, 255)); // Random color
+    } else {
+      fill(dim ? 150 : 255); // Default fill color
+    }
+    noStroke();
+
+    let sx = map(this.x / this.z, 0, 1, 0, width); // Map X for screen
+    let sy = map(this.y / this.z, 0, 1, 0, height); // Map Y for screen
+
+    let r = map(this.z, 0, width, 16, 0); // Calculate radius
+    ellipse(sx, sy, r, r); // Draw star
+
+    let px = map(this.x / this.pz, 0, 1, 0, width); // Previous X
+    let py = map(this.y / this.pz, 0, 1, 0, height); // Previous Y
+
+    this.pz = this.z; // Update previous Z
+
+    stroke(255); // Line color
+    line(px, py, sx, sy); // Draw trailing line
+  }
+}
