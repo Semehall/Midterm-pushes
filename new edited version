@@ -1,0 +1,234 @@
+let angle = 0; //rotation angle
+let stars = []; //stars array
+let people = []; //people array
+let lastPersonAddedFrame = 0; //last frame tracker
+let speed; //speed variable
+let scene = 1; //scene state
+let transitionFrame = 600; //scene change
+let flashSpeed = 30; //flash effect
+let personX, personY; //person position
+let blackHoleSize = 0; //black hole size
+let blackHoleGrowing = false; //growth state
+let shakeAmount = 0; //shake effect
+let explosionTriggered = false; //explosion state
+let explosionFrameStart; //explosion start frame
+
+function setup() {
+  createCanvas(windowWidth, windowHeight); //canvas setup
+  for (let i = 0; i < 300; i++) {
+    stars.push(new Star()); //populate stars
+  }
+  personX = width / 2; //initial X
+  personY = height / 2; //initial Y
+}
+
+function draw() {
+  speed = map(mouseX, 0, width, 0, 10);
+
+  //scene 1-5 transitions
+  if (frameCount > transitionFrame && frameCount <= transitionFrame * 2) {
+    scene = 2; 
+  } else if (frameCount > transitionFrame * 2 && frameCount <= transitionFrame * 2 + 420) { //7 seconds for Scene 3
+    scene = 3; 
+  } else if (frameCount > transitionFrame * 2 + 420 && frameCount <= transitionFrame * 3 + 600) { 
+    scene = 4; 
+  } else if (frameCount > transitionFrame * 3 + 600) {
+    scene = 5; 
+  }
+
+  if (scene === 1) {
+    drawScene1();
+  } else if (scene === 2) {
+    drawScene2();
+  } else if (scene === 3) {
+    drawScene3();
+  } else if (scene === 4) {
+    drawScene4();
+  } else if (scene === 5) {
+    drawScene5();
+  }
+}
+
+function drawScene1() {
+  //scene 1- initial starfield and moving figure
+  background(0);
+  drawStarfield();
+  drawPerson(mouseX, mouseY);
+}
+
+function drawScene2() {
+  //scene 2 -starfield that is shifting colors
+  background(0, 10); //fading effect for depth
+  drawStarfield(true, false, true); // Colorful stars
+  drawPerson(mouseX, mouseY, 1.5, false, color(255, 182, 193)); //larger pink head peroson
+}
+
+function drawScene3() {
+  //scene 3- flashing background with multiple colors and black hole
+  let colors = [color(0, 0, 255), color(255, 0, 0), color(255, 255, 0), color(255, 105, 180), color(0, 255, 0)];
+  let currentColor = colors[frameCount % colors.length];
+
+  if (frameCount % flashSpeed < flashSpeed / 2) {
+    background(currentColor);
+  } else {
+    background(0);
+  }
+
+  flashSpeed = max(1, flashSpeed * 0.95); //increasing flash speed over time
+
+  //black hole size based on mousex position
+  blackHoleSize = map(mouseX, 0, width, 50, width * 1.5);
+
+  fill(0);
+  noStroke();
+  ellipse(width / 2, height / 2, blackHoleSize);
+
+  //checking if the person is being pulled toward the black hole
+  if (blackHoleSize > dist(personX, personY, width / 2, height / 2)) {
+    personX += (width / 2 - personX) * 0.05;
+    personY += (height / 2 - personY) * 0.05;
+  }
+
+  //person shrinking into the black hole (interactive with the mouse)
+  if (blackHoleSize < width) {
+    drawPerson(personX, personY, map(blackHoleSize, 0, width, 1.5, 0.1), true);
+  }
+}
+
+function drawScene4() {
+  //scene 4 - shaking and explosion with random people added
+  if (frameCount % max(5, 20 - (frameCount - explosionFrameStart) / 10) < max(2, 10 - (frameCount - explosionFrameStart) / 20)) {
+    background(255);
+  } else {
+    background(0);
+  }
+
+  for (let i = 0; i < people.length; i++) {
+    drawPerson(people[i].x, people[i].y, 1, false, people[i].color);
+  }
+
+  //shakeamount changes based on mouseY 
+  shakeAmount = map(mouseY, 0, height, 5, 50); 
+
+  if (!explosionTriggered) {
+    explosionTriggered = true;
+    explosionFrameStart = frameCount;
+  }
+
+  if (frameCount - explosionFrameStart < 600) { 
+    translate(random(-shakeAmount, shakeAmount), random(-shakeAmount, shakeAmount));
+  } else {
+    drawExplosion(); //flashy explosion and turn into stars
+  }
+}
+
+function mousePressed() {
+  //new person at the mouse location with a random color head (works when clicked only)
+  let newPerson = {
+    x: mouseX,
+    y: mouseY,
+    color: color(random(255), random(255), random(255)) // random color head
+  };
+  people.push(newPerson);
+}
+
+function drawScene5() {
+  //scene 5- final starfield after explosion with flashing background
+  if (frameCount % flashSpeed < flashSpeed / 2) {
+    background(255);
+  } else {
+    background(0);
+  }
+  drawStarfield(true, false, true); //colorful stars without person
+}
+
+function drawStarfield(distant = false, dim = false, colorful = false) {
+  for (let i = 0; i < stars.length; i++) {
+    if (distant) {
+      stars[i].update(0.5); //slower speed 
+    } else {
+      stars[i].update();
+    }
+    stars[i].show(dim, colorful);
+  }
+}
+
+function drawPerson(x, y, scaleFactor = 1, slowRotation = false, colorFill = 200) {
+  push();
+  translate(x, y);
+  angleMode(DEGREES);
+  rotate(angle);
+  scale(scaleFactor);
+
+  //person shape (head,body, arms and legs)
+  stroke(255);
+  fill(colorFill);
+
+  ellipse(0, -50, 30, 30);
+
+  line(0, -35, 0, 30);
+
+  line(0, -20, -20, 10);
+  line(0, -20, 20, 10);
+
+  line(0, 30, -15, 60);
+  line(0, 30, 15, 60);
+
+  pop();
+
+  //rotation speed
+  angle += slowRotation ? 0.3 : 0.8;
+}
+
+function drawExplosion() {
+  //explosion turning into stars
+  for (let i = 0; i < 300; i++) {
+    let x = random(width);
+    let y = random(height);
+    fill(random(100, 255), random(100, 255), random(100, 255));
+    noStroke();
+    ellipse(x, y, random(2, 5));
+  }
+}
+
+class Star {
+  constructor() {
+    this.x = random(-width, width);
+    this.y = random(-height, height);
+    this.z = random(width);
+    this.pz = this.z;
+  }
+
+  update(speedFactor = 1) {
+    this.z -= speed * speedFactor;
+    if (this.z < 1) {
+      this.z = width;
+      this.x = random(-width, width);
+      this.y = random(-height, height);
+      this.pz = this.z;
+    }
+  }
+
+  show(dim = false, colorful = false) {
+    if (colorful) {
+      fill(random(100, 255), random(100, 255), random(100, 255));
+    } else {
+      fill(dim ? 150 : 255);
+    }
+    noStroke();
+
+    let sx = map(this.x / this.z, 0, 1, 0, width);
+    let sy = map(this.y / this.z, 0, 1, 0, height);
+
+    let r = map(this.z, 0, width, 16, 0);
+    ellipse(sx, sy, r, r);
+
+    let px = map(this.x / this.pz, 0, 1, 0, width);
+    let py = map(this.y / this.pz, 0, 1, 0, height);
+
+    this.pz = this.z;
+
+    stroke(255);
+    line(px, py, sx, sy);
+  }
+}
